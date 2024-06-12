@@ -1,0 +1,68 @@
+---
+- hosts: all
+  become: yes
+#  vars:
+#      zabbix_server: "{{ 158.160.144.236 }}"
+  tasks:
+   - name: Copy zabbix repository to RedHat Family
+     copy:
+       src: /etc/ansible/common/files/repos/zabbix/zabbix-release-6.0-4.el7.noarch.rpm
+       dest: /home/ansible-admin/zabbix-release-6.0-4.el7.noarch.rpm
+       mode: 0777
+     when:
+       ansible_os_family == "RedHat"
+
+   - name: Add zabbix repository on RedHat Family
+     yum:
+       name: /home/ansible-admin/zabbix-release-6.0-4.el7.noarch.rpm
+       state: present
+     when:
+       ansible_os_family == "RedHat"
+
+   - name: Install zabbix-agent2 on RedHat Family
+     yum:
+       name=zabbix-agent2
+       state=latest
+     when:
+       ansible_os_family == "RedHat"
+     notify:
+       zabbix-agent2 systemd
+
+   - name: Copy zabbix repository to Debian Family
+     copy:
+       src: /etc/ansible/common/files/repos/zabbix/zabbix-release_6.0-4+ubuntu20.04_all.deb
+       dest: /home/ansible-admin/zabbix-release_6.0-4+ubuntu20.04_all.deb
+       mode: 0777
+     when:
+         ansible_os_family == "Debian"
+   - name: Add zabbix repository on Debian Family
+     shell: dpkg -i /home/ansible-admin/zabbix-release_6.0-4+ubuntu20.04_all.deb && apt update
+     when:
+       ansible_os_family == "Debian"
+   - name: Install zabbix-agent on Ubuntu
+     apt:
+       name=zabbix-agent2
+       state=latest
+     when:
+       ansible_os_family == "Debian"
+     notify:
+       zabbix-agent2 systemd
+
+#   - name: Copy configuration zabbix-agent2
+#     copy:
+#       src: /etc/ansible/common/files/config/zabbix/zabbix_agent2.conf
+#       dest: /etc/zabbix/zabbix_agent2.conf
+#       mode: 0755
+
+   - name: Copy configuration zabbix-agent2
+     template:
+       src: /etc/ansible/common/files/config/zabbix/zabbix_agent2.conf
+       dest: /etc/zabbix/zabbix_agent2.conf
+       mode: 0755
+
+  handlers:
+  - name: zabbix-agent2 systemd
+    systemd:
+      name: zabbix-agent2.service
+      enabled: yes
+      state: started
